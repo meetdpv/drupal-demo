@@ -1,0 +1,87 @@
+RewriteEngine on
+
+# Block Browser Request to .htaccess
+<Files ~ "^\.htaccess">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# CWE-79 Fix
+<IfModule headers_module>
+    Header set X-Content-Type-Options nosniff
+</IfModule>
+
+# Performance Related #########
+
+# Compress Text Files (gzip/deflate output)  (Note: Drupal have build in support)
+<IfModule mod_deflate.c>
+    # Force compression for mangled headers.
+    # http://developer.yahoo.com/blogs/ydn/posts/2010/12/pushing-beyond-gzipping
+    <IfModule mod_setenvif.c>
+            <IfModule mod_headers.c>
+                    SetEnvIfNoCase ^(Accept-EncodXng|X-cept-Encoding|X{15}|~{15}|-{15})$ ^((gzip|deflate)\s*,?\s*)+|[X~-]{4,13}$ HAVE_Accept-Encoding
+                    RequestHeader append Accept-Encoding "gzip,deflate" env=HAVE_Accept-Encoding
+            </IfModule>
+    </IfModule>
+
+    # Compress all output labeled with one of the following MIME-types
+    # (for Apache versions below 2.3.7, you don't need to enable `mod_filter`
+    #    and can remove the `<IfModule mod_filter.c>` and `</IfModule>` lines
+    #    as `AddOutputFilterByType` is still in the core directives).
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE application/atom+xml \
+          application/javascript \
+          application/json \
+          application/rss+xml \
+          application/vnd.ms-fontobject \
+          application/x-font-ttf \
+          application/x-web-app-manifest+json \
+          application/xhtml+xml \
+          application/xml \
+          font/opentype \
+          image/svg+xml \
+          image/x-icon \
+          text/css \
+          text/html \
+          text/plain \
+          text/x-component \
+          text/xml
+    </IfModule>
+</IfModule>
+
+# Leverage this if you have mod_headers Set different cache control headers based on file type
+<ifModule mod_headers.c>
+    # Below 2 Lines are for Not Caching HTML pages
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    #cache xml for 60 seconds
+    <FilesMatch ".xml$">
+    Header set Cache-Control "max-age=60, public, must-revalidate"
+    </FilesMatch>
+
+   #cache css, javascript and text files for 10 minutes
+   <FilesMatch ".(js|css|txt)$">
+     Header set Cache-Control "max-age=600, public"
+   </FilesMatch>
+
+   #cache flash and images for 12 hours
+   <FilesMatch ".(ico|gif|jpg|jpeg|png|bmp)$">
+    Header set Cache-Control "max-age=43200, public"
+   </FilesMatch>
+
+   # Set up caching on media files for 1 year (forever?)
+   <FilesMatch "\.(flv|swf|pdf|avi|mov|mp3|wmv|wav)$">
+    Header set Cache-Control "max-age=31536000, public"
+   </FilesMatch>
+
+   # This is used over the above one only when you want to remove ETag Selectively.
+   <FilesMatch "\.(ttf|ttc|otf|eot|woff|svg|js|css|txt|ico|gif|jpg|jpeg|png|bmp|flv|swf|pdf|avi|mov|mp3|wmv|wav)$">
+     Header unset ETag
+     FileETag None
+   </FilesMatch>
+
+    # allow web fonts to load from any domain (When Needed)
+    <FilesMatch "\.(ttf|ttc|otf|eot|woff|svg)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</ifModule>
